@@ -1,0 +1,169 @@
+using UnityEngine;
+using UnityEngine.Tilemaps; // Called for using Tilemaps
+public class scBoard : MonoBehaviour
+{
+   public Tilemap tilemap { get; private set;}
+   public scPiece activePiece{ get; private set;}
+   
+   public AudioSource LineClear_SFX;
+   public Tetronimo_Data[] tetronimoes;
+   public Vector3Int spawnPosition;
+   public Vector2Int boardSize =  new Vector2Int(10,20);
+
+   public RectInt Bounds // CHECKS THE BOUNDS/BORDERS POSITION
+   {
+       get 
+       {
+           Vector2Int position = new Vector2Int(-this.boardSize.x/2,-this.boardSize.y/2);
+           return new RectInt(position, this.boardSize);
+       }
+   }
+   
+   
+
+   private void Awake()
+   {
+       this.tilemap = GetComponentInChildren<Tilemap>();
+       this.activePiece = GetComponentInChildren<scPiece>();
+       for (int i = 0; i < this.tetronimoes.Length; i++)
+       {
+           this.tetronimoes[i].Initialize();
+       }
+   }
+
+    private void Start()
+    {
+        SpawnPiece();
+    }
+
+    public void SpawnPiece()
+    {
+
+        int random = Random.Range(0,this.tetronimoes.Length);
+        Tetronimo_Data data = this.tetronimoes[random];
+        this.activePiece.Initialize(this, this.spawnPosition, data);
+
+        if(IsValidPosition(this.activePiece, this.spawnPosition))
+        {
+            Set(this.activePiece);
+        }else
+        {
+            GameOver();
+        }
+
+
+        Set(this.activePiece);
+
+    }
+
+
+    private void GameOver()
+    {
+        this.tilemap.ClearAllTiles();
+
+        /////////////////
+
+    }
+    public void Set(scPiece piece)
+    {
+         for(int i = 0; i < piece.cells.Length; i++)
+         {
+           Vector3Int tilePosition = piece.cells[i] + piece.position;
+           this.tilemap.SetTile(tilePosition,piece.data.tile);
+         }
+    }
+
+     public void Clear(scPiece piece) //clears the "Set(scPiece piece)" of every piece as the block goes down and resets it to a new position
+    {
+         for(int i = 0; i < piece.cells.Length; i++)
+         {
+           Vector3Int tilePosition = piece.cells[i] + piece.position;
+           this.tilemap.SetTile(tilePosition,null);
+         }
+    }
+    public bool IsValidPosition(scPiece piece, Vector3Int position)
+    {
+        RectInt bounds = this.Bounds;
+        for(int i = 0; i < piece.cells.Length; i++)
+        {
+            Vector3Int tilePosition = piece.cells[i] + position;
+
+            if(!bounds.Contains((Vector2Int)tilePosition)) // PREVENTS BLOCKS FROM GOING OUT OF BOUNDS/BORDERS
+            {
+                return false;
+            }
+
+            if(this.tilemap.HasTile(tilePosition)) // CHECKS IF THERES ALREADY A TILE IN A POSITION
+            {
+                return false; // MEANS THAT TILE IS AN INVALID POSITION
+            }
+        }
+
+        return true;
+    }
+
+    public void ClearLines()
+    {
+        RectInt bounds = this.Bounds;
+        int row = bounds.yMin;
+
+        while(row < bounds.yMax)
+        {
+            if(IsLineFull(row))
+            {
+                LineClear(row);
+            }else{row++;}
+        }
+    }
+
+    
+    private bool IsLineFull(int row)
+    {
+        RectInt bounds = this.Bounds;
+
+        for(int col = bounds.xMin; col < bounds.xMax; col++)
+        {
+            Vector3Int position = new Vector3Int(col, row, 0);
+            if(!this.tilemap.HasTile(position))
+            {
+                return false;
+            }
+        }
+        return true;
+
+    }
+
+    private void LineClear(int row)
+    {
+        RectInt bounds = this.Bounds;
+        
+            for(int col = bounds.xMin; col < bounds.xMax; col++)
+            {
+                Vector3Int position = new Vector3Int(col, row, 0);
+                this.tilemap.SetTile(position, null);
+            }
+        
+
+            while(row < bounds.yMax)
+            {
+                
+                 for(int col = bounds.xMin; col < bounds.xMax; col++)
+                 {
+                    Vector3Int position = new Vector3Int(col, row + 1, 0);
+                    TileBase above = this.tilemap.GetTile(position);
+                    position = new Vector3Int(col, row , 0);
+                    this.tilemap.SetTile(position, above);
+
+                 }
+                 row++;
+                 this.LineClear_SFX.Play();
+
+            }
+        
+
+
+    }
+
+
+
+}
