@@ -1,2 +1,2 @@
 # Tetris.beta
-a test repository for portfolio
+playable link https://aigo-sama.itch.io/tetris
